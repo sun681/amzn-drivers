@@ -865,3 +865,49 @@ ENA driver supports native AF XDP (zero copy), however the feature is still
 experimental.
 Please follow https://github.com/amzn/amzn-drivers/issues/221 for possible
 mitigations to issues.
+
+
+Flow Steering (ntuple)
+======================
+
+The ENA Linux driver supports flow steering using ntuple filters,
+which allow packets to be directed to specific queues based on defined flow criteria.
+
+The resources used to configure flow steering rules are allocated as a continuous table.
+The number of entries available in this table is determined by the number of virtual CPUs on the host.
+The table is shared across all interfaces on the host, meaning that an entry used by one interface cannot be used
+by another interface until the rule is removed.
+
+To verify that the feature is supported, run :code:`ethtool -k` and expect the output :code:`ntuple-filters: on`.
+The feature is supported starting from EC2 7th generation instance-types.
+
+Below are some usage examples:
+
+Adding a flow steering rule:
+
+(configuring IPv4 tcp traffic with destination port 5001 to queue idx 1, set this rule to index 6 in flow steering table)
+
+:code:`ethtool -N eth1 flow-type tcp4 dst-port 5001 action 1 loc 6`
+
+Deleting a flow steering rule:
+
+:code:`ethtool -N eth1 delete 6`
+
+Viewing the list of configured rules:
+
+:code:`ethtool -n eth1`
+
+.. code-block:: shell
+
+  # ethtool -n eth1
+  8 RX rings available
+  Total 1 rules
+
+  Filter: 6
+  Rule Type: TCP over IPv4
+  Src IP addr: 0.0.0.0 mask: 255.255.255.255
+  Dest IP addr: 0.0.0.0 mask: 255.255.255.255
+  TOS: 0x0 mask: 0xff
+  Src port: 0 mask: 0xffff
+  Dest port: 5001 mask: 0x0
+  Action: Direct to queue 1
